@@ -7,7 +7,11 @@ var userSchema = new mongoose.Schema({
   videostatus:{
     type:String,
     default:"active"
-  }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now(),
+  },
 });
 
 module.exports = mongoose.model("galleryVideo", userSchema);

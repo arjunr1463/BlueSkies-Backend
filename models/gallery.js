@@ -8,7 +8,11 @@ var userSchema = new mongoose.Schema({
   imagestatus:{
     type:String,
     default:"active"
-  }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now(),
+  },
   
 });
 
