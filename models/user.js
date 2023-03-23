@@ -52,15 +52,31 @@ var userSchema = new mongoose.Schema({
     data: Buffer,
     contentType: String,
   },
+  studyMaterials: [
+    {
+      name: {
+        type: String,
+        required: true,
+      },
+      contentType: {
+        type: String,
+        required: true,
+      },
+      data: {
+        type: Buffer,
+        required: true,
+      },
+    },
+  ],
   password: {
     type: String,
   },
-  confirmpassword:{
+  confirmpassword: {
     type: String,
   },
-  personalstatus:{
-    type:String,
-    default:"active"
+  personalstatus: {
+    type: String,
+    default: "active",
   },
   createdAt: {
     type: Date,

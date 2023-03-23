@@ -70,6 +70,7 @@ const createUser = async (req, res) => {
     });
     const password = randomstring.generate(6);
     user.password = password;
+    user.confirmpassword = password;
     user.studentid = userId;
     await user.save();
     const transporter = nodemailer.createTransport({
@@ -94,6 +95,8 @@ const createUser = async (req, res) => {
   }
 };
 
+
+
 //getUserAdminPanel
 const getAllUsers = async (req, res) => {
   try {
@@ -116,6 +119,16 @@ const getSingleUser = async (req, res) => {
     res.json(user);
   } catch {
     res.status(500).json("Something wen wrong");
+  }
+};
+
+const getStudentById = async (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    const user = await User.findOne({ studentId });
+    res.json(user);
+  } catch {
+    res.status(500).json("Something went wrong");
   }
 };
 
@@ -208,6 +221,27 @@ const editUser = async (req, res) => {
       courseend,
     } = req.body;
 
+    if (
+      !name ||
+      !course ||
+      !mobile ||
+      !email ||
+      !qualification ||
+      !address ||
+      !coursefee ||
+      !paymenttype ||
+      !coursestart ||
+      !courseend
+    ) {
+      return res.status(400).json("All fields are required");
+    }
+    if (!validator.isEmail(email)) {
+      return res.status(400).json("Invalid email address");
+    }
+    if (!/^[0-9]{10}$/.test(mobile)) {
+      return res.status(400).json("Invalid phone number");
+    }
+
     const user = await User.findOneAndUpdate(
       { studentid: id },
       {
@@ -239,7 +273,6 @@ const editUser = async (req, res) => {
   }
 };
 
-
 //changepassword
 const ChangePassword = async (req, res) => {
   try {
@@ -248,7 +281,13 @@ const ChangePassword = async (req, res) => {
     const userId = decoded.id;
     const user = await User.findById(userId);
     if (!user) return res.status(404).send({ message: "User not found" });
-    else {
+    if (!req.body.oldpassword) {
+      return res.status(400).send({ error: "Please fill old password" });
+    } else if (!req.body.newpassword) {
+      return res.status(400).send({ error: "Please fill new password" });
+    } else if (!req.body.newconfirmpassword) {
+      return res.status(400).send({ error: "Please fill Confirm password" });
+    } else {
       if (req.body.oldpassword === user.confirmpassword) {
         if (req.body.newpassword !== req.body.newconfirmpassword) {
           res.json("Password doesnt match");
@@ -270,6 +309,56 @@ const ChangePassword = async (req, res) => {
   }
 };
 
+const addstudymaterial = async (req, res) => {
+  try {
+    const courseType = req.body.courseType;
+    const studyMaterial = {
+      name: req.file.originalname,
+      contentType: req.file.mimetype,
+      data: req.file.buffer,
+    };
+    const users = await User.find({ course: courseType });
+    for (const user of users) {
+      if (
+        !user.studyMaterials.find((file) => file.name === studyMaterial.name)
+      ) {
+        user.studyMaterials.push(studyMaterial);
+        await user.save();
+      }
+    }
+    res.status(200).json({ message: "Study material uploaded successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+const getstudymaterial = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const courseType = req.params.courseType;
+    const user = await User.findOne({ userId, course: courseType });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const materials = user.studyMaterials.map((material) => {
+      return {
+        name: material.name,
+        data: material.data.toString("base64"),
+      };
+    });
+
+    res.status(200).json({ studyMaterials: materials });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
 module.exports = {
   createUser,
   Login,
@@ -278,5 +367,9 @@ module.exports = {
   getSingleUser,
   editUser,
   deleteUser,
-  deletemultiple
+  deletemultiple,
+  ChangePassword,
+  getStudentById,
+  addstudymaterial,
+  getstudymaterial,
 };

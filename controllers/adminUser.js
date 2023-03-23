@@ -4,6 +4,15 @@ const jwt = require("jsonwebtoken");
 //create
 const createadminuser = async (req, res) => {
   try {
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(req.body.email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const mobileRegex = /^(\+\d{1,3}[- ]?)?\d{10}$/;
+    if (!mobileRegex.test(req.body.mobile)) {
+      return res.status(400).json({ message: "Invalid mobile number format" });
+    }
     const userExists = await AdminUser.findOne({
       $or: [{ email: req.body.email }, { mobile: req.body.mobile }],
     });
@@ -19,7 +28,8 @@ const createadminuser = async (req, res) => {
       email: req.body.email,
       mobile: req.body.mobile,
       password: req.body.password,
-      confirmpassword:req.body.password
+      confirmpassword: req.body.password,
+      issuperadmin: req.body.issuperadmin,
     });
     const savedUser = await newUser.save();
     res
@@ -58,54 +68,84 @@ const adminuserLogin = async (req, res) => {
 };
 
 const adminuserLogout = async (req, res) => {
+  const token = req.headers.authorization.split(" ")[1];
+  if (!token) return res.status(401).send("Access Denied");
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    decoded.exp = Math.floor(Date.now() / 1000) - 10;
+    const expiredToken = jwt.sign(decoded, process.env.JWT_SECRET);
+
+    res.send({
+      message: "Token has been expired",
+      expiredToken,
+    });
+  } catch (error) {
+    res.status(400).send("Invalid Token");
+  }
+};
+
+const AdminChangePassword = async (req, res) => {
+  try {
     const token = req.headers.authorization.split(" ")[1];
-    if (!token) return res.status(401).send("Access Denied");
-  
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      decoded.exp = Math.floor(Date.now() / 1000) - 10;
-      const expiredToken = jwt.sign(decoded, process.env.JWT_SECRET);
-      
-  
-      res.send({
-        message: "Token has been expired",
-        expiredToken,
-      });
-    } catch (error) {
-      res.status(400).send("Invalid Token");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+    const user = await AdminUser.findById(userId);
+    if (!user) return res.status(404).send({ message: "User not found" });
+    if (!req.body.oldpassword) {
+      return res.status(400).send({ error: "Please fill old password" });
+    } else if (!req.body.newpassword) {
+      return res.status(400).send({ error: "Please fill new password" });
+    } else {
+      if (req.body.oldpassword === user.confirmpassword) {
+        await AdminUser.findOneAndUpdate(
+          (user.password = req.body.newpassword),
+          (user.confirmpassword = req.body.newpassword)
+        );
+        res.status(200).json("Password successfully changed");
+        user.save();
+      } else {
+        return res.status(400).send({ error: "old password is incorrect" });
+      }
     }
-  };
+  } catch (err) {
+    res.status(500).json("Something went wrong");
+  }
+};
 
-  const AdminChangePassword = async (req, res) => {
-    try {
-      const token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id;
-      const user = await AdminUser.findById(userId);
-      if (!user) return res.status(404).send({ message: "User not found" });
-      if (!req.body.oldpassword ){
-        return res.status(400).send({ error: "Please fill old password" });
-      }
-      else if(!req.body.newpassword){
-        return res.status(400).send({ error: "Please fill new password" });
-      }
-      else {
-        if (req.body.oldpassword === user.confirmpassword) {
-         
-            await AdminUser.findOneAndUpdate(
-              (user.password = req.body.newpassword),
-              (user.confirmpassword = req.body.newpassword)
-            );
-            res.status(200).json("Password successfully changed");
-            user.save();
-          
-        } else {
-          return res.status(400).send({ error: "old password is incorrect" });
-        }
-      }
-    } catch (err) {
-      res.status(500).json("Something went wrong")
+const getallAdmin = async (req, res) => {
+  try {
+    const adminUsers = await AdminUser.find({});
+    res.status(200).json(adminUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const deleteadmin = async (req, res) => {
+  try {
+    const adminUser = await AdminUser.findById(req.params.id);
+    if (!adminUser) {
+      return res.status(404).json({ message: "Admin user not found" });
     }
-  };
+    if ((adminUser.issuperadmin = true)) {
+      await adminUser.deleteOne();
+      res.status(200).json({ message: "Admin user deleted successfully" });
+    } else {
+      res.status(404).json({ message: "Admin is not superadmin" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
-module.exports = { createadminuser, adminuserLogin,adminuserLogout,AdminChangePassword };
+module.exports = {
+  createadminuser,
+  adminuserLogin,
+  adminuserLogout,
+  AdminChangePassword,
+  getallAdmin,
+  deleteadmin,
+};

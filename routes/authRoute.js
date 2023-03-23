@@ -1,13 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+
+
 const {
   createadmin,
   createadminuser,
   adminuserLogin,
   adminuserLogout,
   AdminChangePassword,
+  getallAdmin,
+  deleteadmin,
 } = require("../controllers/adminUser");
+
 const upload = multer({
   limits: {
     fileSize: 1024 * 1024 * 1.5,
@@ -55,6 +60,10 @@ const {
   editUser,
   deleteUser,
   deletemultiple,
+  ChangePassword,
+  getStudentById,
+  addstudymaterial,
+  getstudymaterial,
 } = require("../controllers/user");
 
 router.post("/Blog/createblog", upload.single("image"), createBlog);
@@ -73,8 +82,12 @@ router.get("/Blog/createComment/:id", getComments);
 router.post("/user/createuser", upload.single("image"), createUser);
 router.post("/user/studentlogin", Login);
 router.post("/user/studentlogout", Logout);
+router.post("/user/changepassword", ChangePassword);
+router.post("/user/addstudymaterial",upload.single('studyMaterial'),addstudymaterial)
 router.get("/user/getAllstudent", getAllUsers);
 router.get("/user/getSinglestudent", getSingleUser);
+router.get("/user/getStudymaterial/:courseType", getstudymaterial);
+router.get("/user/getSinglestudent/admin/:studentId", getStudentById);
 router.put("/user/admin/edit/:id", upload.single("image"), editUser);
 router.delete("/user/admin/deleteuser/:id", deleteUser);
 router.delete("/user/register/stage1/deletemultiple", deletemultiple);
@@ -111,6 +124,8 @@ router.delete("/Gallery/admin/deletevideo/:id", deleteVideo);
 router.post("/adminuser/create", createadminuser);
 router.post("/adminuser/login", adminuserLogin);
 router.post("/adminuser/adminLogout", adminuserLogout);
-router.post("/adminuser/changepassword",AdminChangePassword)
+router.post("/adminuser/changepassword", AdminChangePassword);
+router.get("/adminuser/getadminuser", getallAdmin);
+router.delete("/adminuser/deleteadmin/:id", deleteadmin);
 
 module.exports = router;

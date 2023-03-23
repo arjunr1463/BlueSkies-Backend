@@ -20,8 +20,15 @@ var userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  confirmpassword:{
+  confirmpassword: {
     type: String,
+  },
+  issuperadmin: {
+    type: Boolean,
+  },
+  createdAt:{
+    type:Date,
+    default:Date.now
   }
 });
 
