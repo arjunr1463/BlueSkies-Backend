@@ -25,10 +25,14 @@ var userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  status:{
-    type:String,
-    default:"active"
-  }
+  status: {
+    type: String,
+    default: "active",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now(),
+  },
 });
 
 //Export the model
